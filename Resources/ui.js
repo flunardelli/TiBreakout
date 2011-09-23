@@ -74,7 +74,7 @@
 		win.open();
 
         var world = app.createWorld(app.ui.view);
-        world.start();
+       // world.start();
 
     };
  	// app.ui.createGame = function() {

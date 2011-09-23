@@ -5,9 +5,9 @@
     };
     
 	app.createWorld = function(gameView) {
-		// if (world) {
-			// world.stop();
-		// }
+		//if (app.game.world) {
+		//	app.game.world.stop();
+		//}
 		
 		//var world;
 		//var score = "000";
@@ -18,13 +18,14 @@
 		app.game.wallSound = Ti.Media.createSound({url:"/sound/wall.wav",  preload: true});
 		app.game.pitSound = Ti.Media.createSound({url:"/sound/pit.wav",  preload: true});
 			
-		var world = box2d.createWorld(gameView);
-		world.setGravity(0, 0);
-		//world.start();			
-				
+		app.game.world = box2d.createWorld(gameView);
+		app.game.world.setGravity(0, 0);
+		
+		app.game.world.start();
+
 		var wallProperties = { density:100.0, friction:0.0, restitution:1.0, type:"static" };
 			
-		app.game.leftWall = world.addBody(
+		app.game.leftWall = app.game.world.addBody(
 			Ti.UI.createView({
 		  	backgroundColor:"#ababab",
 		  	width:8,
@@ -34,7 +35,7 @@
 		  	type: 'wall'
 			}),wallProperties);
 		
-		app.game.topWall = world.addBody(
+		app.game.topWall = app.game.world.addBody(
 			Ti.UI.createView({
 		  	backgroundColor:"#ababab",
 		  	height:20,
@@ -43,7 +44,7 @@
 		  	type: 'wall'
 			}),wallProperties);
 		
-		app.game.rightWall = world.addBody(
+		app.game.rightWall = app.game.world.addBody(
 			Ti.UI.createView({
 		  	backgroundColor:"#ababab",
 		  	width:8,
@@ -53,7 +54,7 @@
 		  	type: 'wall'
 			}),wallProperties);
 		
-		app.game.bottomWall = world.addBody(
+		app.game.bottomWall = app.game.world.addBody(
 			Ti.UI.createView({
 		  	backgroundColor:"#ababab",
 		  	height:42,
@@ -63,11 +64,8 @@
 		  	backgroundColor: "#000000"
 			}),wallProperties);			
 		
-			// if (bat) {
-				// world.destroyBody(bat);
-			// }
-		var batProperties = { density:10.0, friction:0.4, restitution:0.1, type:"static" };		
-		app.game.bat = world.addBody(
+		var batProperties = { density:10.0, friction:0.4, restitution:1.1, type:"static" };		
+		app.game.bat = app.game.world.addBody(
 			Ti.UI.createView({
 		  	backgroundColor:"#d63bc3",
 		  	height:6,
@@ -78,17 +76,16 @@
 
 		
 		app.game.createBall = function() {				
-			var ballProperties = { density:1.0, friction:0, restitution:1.0, radius:5.0, type:"dynamic" };	
-			app.game.ball = world.addBody(
+			var ballProperties = { density:10.0, friction:0, restitution:1.0, radius:5.0, type:"dynamic" };	
+			app.game.ball = app.game.world.addBody(
 				Ti.UI.createView({
 			  	backgroundColor:"#d63bc3",
 			  	height:6,
 			  	width: 6,
 			  	type: 'ball'
 				}),ballProperties);	
-				app.game.ball.setLinearVelocity([0,(Math.random() * 6) * -1]);		
-				
-						
+		
+			app.game.ball.setLinearVelocity([0,(Math.random() * 6) * -1]);								
 		}		
 
 		var bx = 10;
@@ -99,7 +96,7 @@
 		for (var y = 0; y < 6; y++) {
 			for (var x = 0; x < 20; x++) {			
 				app.game.bricks.push(			
-					world.addBody(
+					app.game.world.addBody(
 						Ti.UI.createView({
 					  	backgroundColor: brickColors[y],
 					  	height: 15,
@@ -132,8 +129,13 @@
 		}
 		
 		app.ui.view.addEventListener("click",app.game.handleBatMove);
+		app.game.bottomWall.view.addEventListener("click",app.game.handleBatMove);
 		
-		world.addEventListener("collision",function(e) {
+		app.ui.restartButton.addEventListener('click',function(e){
+			app.game.reset();
+   		});
+		
+		app.game.world.addEventListener("collision",function(e) {
 			if (e.phase == "begin") {
 				var ballVelocity = app.game.ball.getLinearVelocity();
 				var aType = e.a.view.type;
@@ -142,9 +144,9 @@
 				  	var batmid = e.a.getPosition()[0] + (e.a.view.width / 2);
 					var ballmid = e.b.getPosition()[0] + (e.b.view.width / 2);
 					if (ballmid < batmid) {
-						e.b.setLinearVelocity([ballVelocity[0]-1,ballVelocity[1]]);
+						//e.b.setLinearVelocity([ballVelocity[0],ballVelocity[1]]);
 					} else if (ballmid > batmid) {				
-						e.b.setLinearVelocity([ballVelocity[0]+1,ballVelocity[1]]);
+						//e.b.setLinearVelocity([ballVelocity[0],ballVelocity[1]]);
 					}
 					app.game.handleSound('wall');
 				 } else if (bType == 'ball' && aType == 'pit'){
@@ -152,11 +154,11 @@
 				 	app.ui.numballsLabel.text = app.numballs;
 				 	app.game.handleSound('pit');
 				 	app.game.ball.setAwake(false);
-				 	world.destroyBody(app.game.ball);
+				 	app.game.world.destroyBody(app.game.ball);
 				 	
 				 	if (app.numballs <= 0) {
 				 		
-				 		world.destroyBody(app.game.bat);
+				 		app.game.world.destroyBody(app.game.bat);
 				 		app.ui.gameoverLabel.visible = true;
 				 		app.ui.restartButton.visible = true;		 		
 				 	} else {
@@ -167,7 +169,7 @@
 			 	 } else if (aType == 'brick' && bType == 'ball') {
 			 		app.game.handleSound('brick');
 					if (e.a) {
-						world.destroyBody(e.a);
+						app.game.world.destroyBody(e.a);
 						app.score++;
 						if (app.score < 10){
 							app.score = "0"+app.score;
@@ -199,19 +201,21 @@
 
 
 		app.game.reset = function(){
-			// createWorld();
-			// createWalls();
+			app.game.world.stop();
+			//app.game.world.start();
+			app.createWorld(app.ui.view);
+			//createWalls();
 			// createLevel();
 			// createBat();
 			// createBall();
 			// handleCollision();
-			// gameoverLabel.visible = false;
-			// restartButton.visible = false;
+			app.ui.gameoverLabel.visible = false;
+			app.ui.restartButton.visible = false;
 			// view.addEventListener('click',batMove);
-			// score = '000';
-			// scoreLabel.text = score;
-			// numballs = 5;
-			// numballsLabel.text = numballs;
+			app.score = '000';
+			app.ui.scoreLabel.text = app.score;
+			app.numballs = 5;
+			app.ui.numballsLabel.text = app.numballs;
 		}
 		
 		app.game.handleSound = function(sound){
@@ -231,7 +235,7 @@
 		app.game.createBall();
 		
 		
-		return world;	
+		return app.game.world;	
 	}
 			
 
